@@ -55,13 +55,17 @@
  * 정확히 어떤 작업을 몇 개나 비동기적으로 수행할 수 있는가? 에 대한 답변은 '상황에 따라 다름'이 됩니다.
  * ? sync와 async는 blocking과 non-blocking과 동의어일까요?
  * 아닙니다. sync와 async는 thread가 kernel의 응답을 바라보는 관점이고, block과 non-block은 thread가 시스템콜 이후 진행을 할 수 있는지 없는지 여부에 따라 다른 것입니다.
+ * asynchronous를 실현하기 위한 방법이 대표적으로 multi-thread인 것인데, 간혹 asynchronous와 multi-threading을 동의어로 여기는 분도 계십니다.
+ * 즉, multi-threading, non-block call등이 모두 asynchronous를 실현하기 위한 방법들이 것입니다.
+ * 그 중에서도 nodejs는 block I/O를 모두 libuv에 넘김(다른 threadpool에게 일을 맡김)으로써 자신은 non-block으로 동작하는 것이지요. 이 또한 asynchronous I/O를 구현하는 대표적인 방법입니다.
+ * 
  * ? 그렇다면 nodejs의 비동기 작업은 asynchronous non-blocking인가요?
  * network I/O는 그렇습니다. don't block the event-loop에 나와있거든요. 근데 나머지는 잘 모르겠어요..
  * 
  * ? nodejs에선 비동기 작업이 완료되었음을 어떻게 알 수 있나요?
- * 몰라요... file descriptor?
+ * noti? callback? file descriptor?
  * ? 그렇다면 nodejs는 항상 multiplexing과 reactor를 사용해 비동기 작업을 처리한다는 말이군요!
- * ! 아닙니다. nodejs는 network I/O에만 epoll, kqueue, IOCP 등을 사용합니다. File I/O는 오직 libuv의 thread pool을 이용해 처리됩니다. 
+ * ! 아닙니다. nodejs는 network I/O에만 epoll, kqueue, IOCP 등을 사용합니다. File I/O는 오직 libuv의 thread pool을 이용해 처리됩니다.
  * ! 이는 libuv의 공식문서에 명시되어있는 내용으로, 여러 시스템을 통일해서 사용하기 어렵다는 문제에서 비롯됩니다.
  * ? libuv가 file descriptor를 참조한다는 말이 자주 나오는데, libuv는 여러가지 일을 수행하는데 file외(network I/O)는 어떻게 참조하나요?
  * nodejs 혹은 libuv공식문서에서도 계속 등장하는 file descriptor라는 말은,  file system에 속하지 않는 대상에도 구분되지 않고 쓰입니다.
@@ -107,6 +111,16 @@
  * ? 그렇다면 nodejs는 싱글스레드가 아닌 것인가요?
  * 어떻게 보면, 그렇습니다. 다만, main thread에서 event loop와 js실행을 모두 담당하므로 싱글 스레드라는 표현도 맞습니다.
  * 단지 cpu intensive 혹은 I/O intensive한 작업을 libuv의 thread pool에서 처리하므로 nodejs의 스레드는 두 종류(nodejs: don't block the event-loop: types of thead)라고 생각하셔도 무방합니다.
+ * 그러나 nodejs는 싱글스레드라는 사실의 근간을 흔들만한 기능도 포함되어있는데, worker thread입니다.
+ * worker thread는 main thread에 종속적이긴 하지만 각 worker가 모두 각자의 V8, event-loop, event queue를 가지고 동작합니다.
+ * 이전에는 threadpool이 nodejs를 도와준다고하더라도 결국 이벤트루프가 하나이기 때문에 nodejs는 관용적으로 싱글스레드라고 표현되지만, 이벤트루프가 각자의 쓰레드에서 실행된다면 조금 더 어려운 문제이긴 합니다.
+ * 그러나 nodejs는 기본적으로 싱글스레드로 실행되고, 이러한 동작은 개발자가 직접 조작해야하는 문제이기 때문에 '싱글스레드에 국한되지 않는다' 정도로 이해하셔도 무방합니다. 여전히 nodejs는 싱글스레드라는 표현이 어울린다는 것이지요.
+ * 그렇다면 nodejs도 cpu intensive한 처리에 적절한 것 아닌가에 대한 생각을 가지실 수도 있습니다. 그건 아닙니다.
+ * 이런 기능들은 event-loop 병목을 '어느정도' 해결해주지만 여전히 JS이기에 cpu intensive한 연산을 수행하기에 적합하다는 의미는 아닙니다.
+ * 사실 가장 node스럽게 CPU intensive task 해결하는 방법은 C++로 코드를 작성해 libuv의 threadpool이 처리하도록 하는 것입니다. 기존에 nodejs가 성능을 높이기위해 사용하고 있던 방식에, 개발자가 원하는 특정 기능도 포함시키는 것이지요.
+ * worker thread사용법에 관한 자세한 설명은 생략하도록 하고, 관심이 있으신 분들은 공식문서를 참고하시길 바랍니다.
+ *
+ * 참고로, cluster에서 실행되는 worker들은 thread라기보다는 분리된 process가 실행되는 것으로, 하나의 process내에 여러개의 스레드가 실행되는 worker thread와는 다릅니다.
  * 
  * * event-loop
  * ! https://www.youtube.com/watch?v=8aGhZQkoFbQ
