@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express(); 
 const middleware = errorHandler = useRouter = app.use.bind(app);
-const listen = app.listen;
+const listen = app.listen.bind(app);
 
 exports.PATH = require('./path');
 exports.handler = require('./handler');
