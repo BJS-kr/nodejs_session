@@ -30,8 +30,13 @@
  * 커널은 시스템을 보호하기 위해 존재하는데, 이름 그대로 핵심적이고 user가 접근할 수 없는 영역입니다. 커널에 대해서는 직접 찾아보시기 바랍니다.
  * * interrupt와 system call?
  * 1. interrupt
- *   시스템에서 발생한 다양한 종류의 이벤트 혹은 그런 이벤트를 알리는 메커니즘
- *   종류는 매우 다양하지만 가장 많이 접하는 종류들은 아래와 같습니다. 
+ *   시스템에서 발생한 다양한 종류의 이벤트 혹은 그런 이벤트를 알리는 메커니즘. 인터럽트는 CPU가 모든 IO를 직접 처리하는 것이 비효율적이라는 데에서 출발한다. 장치 드라이버는 cpu로부터 IO요청을 받으면 작업을 수행 후, 작업 완료
+ * 신호를 보내게 되는데 이것이 인터럽트이다. 즉, cpu의 작업요청, 드라이버의 작업, 작업완료 신호 이렇게 세 단계로 구분된다.
+ * 입출력 관리자는 자신이 할당받는 작업의 결과물을 메모리에 올려 cpu가 사용할 수 있게 해야하는데, 메모리 접근은 cpu의 고유권한으로 원래는 드라이버가 접근이 불가능하다. 그러나 cpu로부터 DMA(Direct Memory Access)권한을 받으면
+ * 결과물을 메모리에 올려놓을 수 있으므로, DMA는 interrupt와 함께 자주 등장하는 개념이다.
+ * 
+ * 인터럽트가 발생하는 대표적인 상황들은 다음과 같다. 다음의 상황들 외에도 시스템은 엄청나게 다향한 인터럽트를 사용한다.
+ *   
  *   a. 전원에 문제가 생겼을 때
  *   b. I/O작업이 완료되었을 때
  *   c. timer가 작동했을 때(시간이 다 되었을 때) -> js 타이머와 연관이있나요? 모르겠습니다...
@@ -52,21 +57,25 @@
  * 참고로 libuv는 이런 작업들을 처리하기 위해 thread pool을 생성하고 있으며 갯수는 4개입니다. (uv_threadpool 환경 설정을 통해 128개까지 설정가능)
  * 어떤 kernel에서도 지원하지 않는 작업을 네개 이상 비동기적으로 실행시키면 더이상 작업이 일어나지 않겠죠?
  * libuv는 우선 kernel이 처리할 수 있는 일은 kernel에게 맡겨버리니까요. kernel이 수행할 수 있는 작업의 한계는 시스템상, 컴퓨터의 스펙상 차이가 있을 것이므로
- * 정확히 어떤 작업을 몇 개나 비동기적으로 수행할 수 있는가? 에 대한 답변은 '상황에 따라 다름'이 됩니다.
+ * 정확히 어떤 작업을 몇 개나 비동기적으로 수행할 수 있는가? 에 대한 답변은 '상황에 따라 다름'이 됩니다.'
+ * 
  * ? sync와 async는 blocking과 non-blocking과 동의어일까요?
  * 아닙니다. sync와 async는 thread가 kernel의 응답을 바라보는 관점이고, block과 non-block은 thread가 시스템콜 이후 진행을 할 수 있는지 없는지 여부에 따라 다른 것입니다.
- * asynchronous를 실현하기 위한 방법이 대표적으로 multi-thread인 것인데, 간혹 asynchronous와 multi-threading을 동의어로 여기는 분도 계십니다.
- * 즉, multi-threading, non-block call등이 모두 asynchronous를 실현하기 위한 방법들이 것입니다.
+ *  multi-threading, non-block call등이 모두 asynchronous를 실현하기 위한 방법들이 것입니다.
  * 그 중에서도 nodejs는 block I/O를 모두 libuv에 넘김(다른 threadpool에게 일을 맡김)으로써 자신은 non-block으로 동작하는 것이지요. 이 또한 asynchronous I/O를 구현하는 대표적인 방법입니다.
  * 
- * ? 그렇다면 nodejs의 비동기 작업은 asynchronous non-blocking인가요?
- * network I/O는 그렇습니다. don't block the event-loop에 나와있거든요. 근데 나머지는 잘 모르겠어요..
+ * ? 그렇다면 모든 비동기 작업은 IO인가요?
+ * 아닙니다. computational power가 많이 들어가는 작업도 비동기로 처리할 수 있습니다. 대표적으로 crypto의 pbkdf2와 같은 것이 그렇습니다.
+ * 이런 작업의 동기버전인 pbkdf2Sync와 같은 함수를 사용할 경우 event-loop이 병목된 상태로 작업이 완료될 때까지 진행되지 못하니 이런 방식은 자제해야합니다.
+ * 그런데 콜백 패턴을 사용하는 함수들의 경우, 사용하기 까다로운 면이 분명히 있습니다. 이런 경우 결과 값을 promisify하여 사용할 수 있습니다.
+ * await는 언뜻 보기엔 코드 진행을 막는 것 처럼 보이지만, 사실 event-loop을 병목시키지 않는 문법적 설탕의 개념입니다.
  * 
  * ? nodejs에선 비동기 작업이 완료되었음을 어떻게 알 수 있나요?
  * noti? callback? file descriptor?
  * ? 그렇다면 nodejs는 항상 multiplexing과 reactor를 사용해 비동기 작업을 처리한다는 말이군요!
  * ! 아닙니다. nodejs는 network I/O에만 epoll, kqueue, IOCP 등을 사용합니다. File I/O는 오직 libuv의 thread pool을 이용해 처리됩니다.
  * ! 이는 libuv의 공식문서에 명시되어있는 내용으로, 여러 시스템을 통일해서 사용하기 어렵다는 문제에서 비롯됩니다.
+ * 
  * ? libuv가 file descriptor를 참조한다는 말이 자주 나오는데, libuv는 여러가지 일을 수행하는데 file외(network I/O)는 어떻게 참조하나요?
  * nodejs 혹은 libuv공식문서에서도 계속 등장하는 file descriptor라는 말은,  file system에 속하지 않는 대상에도 구분되지 않고 쓰입니다.
  * 즉, socket은 fs에 포함되지 않음에도 불구하고, socket descriptor도 file descriptor라고 통으로 묶여서 불립니다.
@@ -77,7 +86,7 @@
 /**@이해안가는것1 don't block the event-loop에 보면 libuv가 처리하는 목록이 나와있는데, network i/o가 빠져있다. dns.lookup이 network i/o는 아닌거같은데... */
 /**@해결 정확히 읽어보면 'threadpool을 사용하는 작업'임. 즉, libuv가 os에 맡기는 작업은 포함되지 않는 것임. network I/O도 그 중하나. */
 /**@해결 여기에서도 nodejs가 fs를 os에 맡기지 않는 다는 것이 드러남. 모든 fs작업을 threadpool이 직접 처리한다고 명시되어있음 */
-/**@해결 꼭 명시된 것만 가능한 것은 또 아님. C++ add-on을 사용자가 작성해서 붙여도 worker pool이 처리함. C++잘하고 싶다 */
+/**@해결 꼭 명시된 것만 가능한 것은 또 아님. C++ add-on을 사용자가 작성해서 붙여도 worker pool이 처리함 */
 
 /**@이해안가는것2 fs는 thread pool이 직접처리한다고 나와있는데 don't block the event-loop는 epoll등의 얘기를 하면서 이런 file descriptor들은 네트워크소켓, 파일 등에 관계없이 대응된다라고 명시해두었음. 어떻게 된 것인가*/
 /**@이어서 don't block the event-loop에는 그런데 fs는 thread pool을 이용한다고 명시하고 있는데 그러면 문서의 오류? 아니면 이해의 부족? epoll, IOCP등은 kernel bound한 용어들인데?*/
@@ -99,7 +108,7 @@
  * 
  * OS커널(멀티스레드) 혹은 libuv의 thread pool(브라우저라면 WebAPIs)에게 blockingI/O 작업을 맡긴다. 
  * 즉, non-blocking이 가능한 것은 blockingI/O를 다른 프로그램에게 넘겼기 때문이다.
- * 즉, JS가 싱글스레드라는 것은 엄밀히 말하면 틀렸다.
+ * 즉, Node.js가 싱글스레드라는 것은 엄밀히 말하면 틀렸다.
  * 보통 싱글스레드라고 표현하는 이유는 이벤트루프가 싱글스레드기반으로 동작하기 때문이다.
  * 
  * 즉, js가 비동기를 지원한다기보다는 js의 런타임(브라우저 or Node)가 비동기를 지원한다고 보는 편이 타당하다.
@@ -160,11 +169,6 @@
  * * worker_thread를 이용한 병렬처리
  */
 
-/**
- * @Bonus
- * * 비동기를 다루는 라이브러리 'async'
- * * 데이터를 스트림으로 바라보자 'rxjs'
- */
 
 // https://developer.ibm.com/articles/l-async/ IBM공식문서
 
