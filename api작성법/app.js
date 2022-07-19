@@ -6,7 +6,7 @@ index.home(PATH.ROOT, handler.main);
 index.useMiddleware(json);
 index.useMiddleware(middleware.global);
 
-index.router(PATH.API, routers);
+index.useRouter(PATH.API, routers);
 
 index.errorHandler(handler.error);
 

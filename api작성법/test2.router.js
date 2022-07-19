@@ -1,5 +1,4 @@
-const router = require('express').Router();
-const { PATH, handler } = require('./index');
+const { PATH, handler, router } = require('./index');
 
 router
   .route(PATH.SAME)
