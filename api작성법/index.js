@@ -14,4 +14,6 @@ exports.listen = listen;
 exports.json = express.json();
 exports.PORT = 9999;
 exports.router = express.Router();
+exports.connect = require('./connection')
+exports.testModel = require('./schema')
 exports.routers = [require('./test1.router'), require('./test2.router')];

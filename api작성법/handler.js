@@ -1,5 +1,6 @@
 const { log } = console;
 
+
 module.exports = {
   main: (request, response) => {
     response.json({response: 'hi!'})
@@ -11,11 +12,14 @@ module.exports = {
     res.status(500).send('Something broke!');
   },
   listen:() => console.log('server started!'),
-  test1Post: (req, res) => {
+  test1Post: (model) => async (req, res) => {
     log(req.body.addedBodyProp)
     log(res.locals.globalMiddlewareProp)
     log(res.locals.middlewareProp)
 
+    log(await new model({subject:'test', description:'test'}).save());
+    log(await model.find())
+    
     res.send('post request success!')
   },
  test2SameGet:(req, res) => {
