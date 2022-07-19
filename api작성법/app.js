@@ -1,13 +1,13 @@
-const express = require('express');
-const app = express();
-const { PATH, handler, middleware, routers } = require('./index');
-const PORT = 9999;
+const index = require('./index');
+const { PATH, handler, middleware, json, PORT, routers } = index;
 
-app.get(PATH.ROOT, handler.main);
+index.home(PATH.ROOT, handler.main);
 
-app.use(express.json());
-app.use(middleware.global);
-app.use(PATH.API, routers);
-app.use(handler.error);
+index.useMiddleware(json);
+index.useMiddleware(middleware.global);
 
-app.listen(PORT, handler.listen);
+index.router(PATH.API, routers);
+
+index.errorHandler(handler.error);
+
+index.listen(PORT, handler.listen);
