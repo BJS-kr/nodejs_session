@@ -24,8 +24,4 @@ function b2(cb) {
   }
 }
 
-function c() {
-  setTimeout(()=>{console.log('c')}, 500)
-}
-
 a2(b2(c))
