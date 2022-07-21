@@ -1,26 +1,27 @@
-const index = require('./index');
-const { PATH, handler, middleware, json, PORT, routers, connect } = index;
+const { PATH, common, middleware, useMiddleware, json, PORT, connect, home, useErrorHandler, useRouter, listen } = require('./index');
+const routers = require('./routers/index')
 
 async function bootstrap() {
-  process.on('SIGINT', (signal) => {
-    require('child_process').exec('docker compose down', (err, stdout, stderr) => {
+  process.on('SIGINT', () => {
+    require('child_process').exec('docker compose down', () => {
       process.exit(1)
     })
-  })
+  });
 
   await connect().catch(e => {
     throw e;
-  })
-  index.home(PATH.ROOT, handler.main);
+  });
+  
+  home(PATH.ROOT, common.main);
 
-  index.useMiddleware(json);
-  index.useMiddleware(middleware.global);
+  useMiddleware(json);
+  useMiddleware(middleware.global);
 
-  index.useRouter(PATH.API, routers);
+  useRouter(PATH.API, routers);
 
-  index.errorHandler(handler.error);
+  useErrorHandler(common.error);
 
-  index.listen(PORT, handler.listen);
+  listen(PORT, common.listen);
 }
 
 bootstrap();
