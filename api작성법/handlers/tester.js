@@ -12,6 +12,6 @@ module.exports = {
   },
 
   throw(req, res) {
-    throw {message: 'intended Error', session: 'node'}
+    throw { message: 'intended Error', session: 'node' }
   }
 }

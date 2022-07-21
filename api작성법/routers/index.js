@@ -1,4 +1,9 @@
-const router1 = require('./router1');
-const router2 = require('./router2');
+const { getRouter } = require('../index');
+const poster = require('./poster');
+const tester = require('./tester');
 
-module.exports = [router1, router2];
+function makeRouter(routerFns) {
+  return routerFns.map(fn => fn(getRouter()))
+}
+
+module.exports = makeRouter([poster, tester]);

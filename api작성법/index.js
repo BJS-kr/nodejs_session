@@ -1,20 +1,26 @@
 const express = require('express');
 const app = express(); 
-const useMiddleware = useErrorHandler = useRouter = app.use.bind(app);
-const listen = app.listen.bind(app);
+const useGlobalMiddleware = useErrorHandler = useRouter = app.use.bind(app);
 
-exports.PATH = require('./path');
-exports.common = require('./handlers/common');
-exports.handler_1 = require('./handlers/handler1');
-exports.handler_2 = require('./handlers/handler2');
-exports.middleware = require('./handlers/middleware');
-exports.home = app.get.bind(app);
-exports.useMiddleware = useMiddleware;
-exports.useErrorHandler = useErrorHandler;
-exports.useRouter = useRouter;
-exports.listen = listen;
-exports.json = express.json();
-exports.PORT = 9999;
-exports.router = express.Router();
-exports.connect = require('./db/connection');
-exports.testModel = require('./db/schema');
+function getRouter() {
+  return require('express').Router();
+}
+
+module.exports = {
+  PATH: require('./path'),
+  common: require('./handlers/common'),
+  poster: require('./handlers/poster'),
+  tester: require('./handlers/tester'),
+  middleware: require('./handlers/middleware'),
+  connect: require('./db/connection'),
+  postModel: require('./db/schema'),
+  home: app.get.bind(app),
+  listen: app.listen.bind(app),
+  json: express.json(),
+  useGlobalMiddleware: useGlobalMiddleware,
+  useErrorHandler: useErrorHandler,
+  useRouter,
+  PORT: 9999,
+  getRouter
+}
+

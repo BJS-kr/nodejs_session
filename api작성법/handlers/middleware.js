@@ -1,15 +1,17 @@
 module.exports = {
-    global: (request, response, next) => {
+  global: (request, response, next) => {
     response.locals.globalMiddlewareProp = 'string from global middleware'
-    next()
+    next();
   },
-    inRouter: (request, response, next) => {
+
+  inRouter: (request, response, next) => {
     response.locals.middlewareProp = 'hi! hello!';
     next();
   },
-    inRouterMethod:(req, res, next) => {
-    req.body.addedBodyProp = 'this is middleware in router';
-    next()
+
+  timeOfArrival:(req, res, next) => {
+    req.body.arrivedAt = Date.now();
+    next();
   }
 }
 
